@@ -3,50 +3,162 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="codebusters practice website - Xenocrypt">
-    <title>Xenocrypt</title>
-    <!-- Load Tailwind CSS CDN for the React component's styling -->
+    <title>Xenocrypt Practice (Spanish v2 - Direct Input)</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Link to your existing styles.css for header/footer/layout -->
-    <link rel="stylesheet" href="styles.css">
+    <!-- Custom styles for the mapping table structure and inputs -->
+    <style>
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        /* --- Cipher Grid Styles (similar to Aristocrat) --- */
+        .char-group {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0 0.5px 20px 0.5px; /* Tighter horizontal margin, vertical spacing */
+            padding: 1px 0;
+            line-height: 1;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        }
+
+        .cipher-char {
+            font-size: 1.5rem;
+            min-width: 25px; 
+            color: #b91c1c; /* Dark Red for Ciphertext */
+            font-weight: 600;
+            line-height: 1.25;
+            text-align: center;
+        }
+        
+        .plaintext-input {
+            width: 28px; 
+            height: 35px; 
+            text-align: center;
+            border: 2px solid #3b82f6; /* Blue border */
+            border-radius: 4px;
+            margin-top: 2px;
+            font-size: 1.25rem;
+            text-transform: uppercase;
+            color: #10b981; /* Green for Plaintext */
+            font-weight: bold;
+            line-height: 1.25;
+            padding: 0;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+        
+        .plaintext-input:focus {
+            border-color: #f59e0b; /* Amber border on focus */
+        }
+
+        .non-cipher {
+            /* For spaces, Ñ, punctuation etc. */
+            font-size: 1.5rem;
+            color: #4b5563; /* Darker gray for non-substituted chars */
+            line-height: 1.25;
+            margin-top: 2px;
+            min-width: 25px; 
+        }
+
+        /* --- Mapping Table Styles (from Aristocrat) --- */
+        .mapping-grid {
+            display: flex;
+            flex-direction: column;
+            margin-top: 15px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            overflow: hidden;
+            width: 100%;
+        }
+        
+        .mapping-row {
+            display: grid;
+            grid-template-columns: 80px repeat(26, 1fr); 
+            gap: 1px; 
+            border-bottom: 1px solid #ddd;
+        }
+
+        .mapping-label {
+            background-color: #e9ecef;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end; 
+            padding-right: 5px;
+            font-size: 0.8rem;
+            color: #333;
+        }
+
+        .mapping-cell {
+            padding: 5px 2px;
+            text-align: center;
+            font-family: monospace;
+            font-size: 0.9rem;
+            font-weight: bold;
+            border-left: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .frequency-row {
+            background-color: #f0f9ff; /* Light blue background */
+        }
+        .frequency-row .mapping-cell {
+            font-weight: normal;
+            font-size: 0.75rem;
+            color: #007bff;
+        }
+    </style>
 </head>
 <body>
-    <!-- Header -->
-    <header>
-        <div class="container">
-            <a href="index.html" class="logo">Codebusters</a>
-            <nav>
-                <ul>
-                    <li><a href="index.html">Home</a></li>
-                    <li><a href="aristocrat.html">Aristocrat</a></li>
-                    <li><a href="pastristocrat.html">Patristocrat</a></li>
-                    <li><a href="baconian.html">Baconian</a></li>
-                    <li><a href="xenocrypt.html">Xenocrypt</a></li>
-                    <li><a href="porta.html">Porta</a></li>
-                    <li><a href="cryptarithm.html">Cryptarithm</a></li>
-                    <li><a href="nihilist.html">Nihilist</a></li>
-                    <li><a href="columnar.html">Columnar</a></li>
-                    <li><a href="morse.html">Fractionated Morse</a></li>
-                </ul>
-            </nav>
-        </div>
-    </header>
 
-    <!-- Main Content -->
     <main>
-        <div class="container">
-            <!-- The React app will render into the 'root' element -->
-            <div id="root"></div>
-            <!-- Load the React entry file for the Xenocrypt app -->
-            <script type="module" src="/src/xenocrypt-main.jsx"></script>
+        <div class="container bg-white p-8 rounded-lg shadow-xl mt-6">
+            <h1 class="text-3xl font-bold text-gray-800 mb-4 text-center">Xenocrypt Practice (Spanish v2)</h1>
+            <p class="text-gray-600 mb-6 text-center">Monoalphabetic Substitution following Science Olympiad rules (Accents removed, Ñ preserved).</p>
+
+            <div id="status-message" class="hidden bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6 rounded">
+                <p class="font-bold">SOLVED!</p>
+                <p>Congratulations, you cracked the Xenocrypt!</p>
+            </div>
+            
+            <p id="message-area" class="font-semibold text-center mt-4 mb-4 text-sm text-blue-600"></p>
+
+            <!-- Controls (Aligned with Aristocrat style) -->
+            <div class="flex flex-col sm:flex-row justify-between items-center mb-6 space-y-3 sm:space-y-0">
+                <button id="new-puzzle-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-150 shadow-md">
+                    Generate New Cipher
+                </button>
+                <button id="clear-button" class="bg-yellow-400 hover:bg-yellow-500 text-gray-800 font-bold py-2 px-4 rounded transition duration-150 shadow-md">
+                    Clear All Guesses
+                </button>
+                <button id="give-up-button" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition duration-150 shadow-md">
+                    Give Up / Show Solution
+                </button>
+            </div>
+
+            <!-- Display Area -->
+            <h2 class="text-2xl font-semibold mb-3 text-gray-800">Ciphertext/Decoded Grid:</h2>
+            <div id="cipher-display" class="border p-4 rounded-lg bg-gray-50 mb-6 tracking-widest leading-loose">
+                <!-- Ciphertext and Plaintext inputs will be injected here -->
+            </div>
+            
+            <!-- Mapping Table -->
+            <div id="mapping-table-area" class="mt-8">
+                <h2 class="text-2xl font-semibold mb-3 text-gray-800">Cipher Alphabet Map & Frequency (A-Z)</h2>
+                <div id="mapping-grid" class="mapping-table w-full bg-white rounded-lg shadow-md">
+                    <!-- Mappings and frequency will be displayed here -->
+                </div>
+            </div>
+            
+
         </div>
     </main>
-    
-    <!-- Footer -->
-    <footer>
-        <div class="container text-center">
-            <p>&copy; 2024 Codebusters Practice</p>
-        </div>
-    </footer>
+
+    <script src="xenocrypt.js"></script>
 </body>
 </html>
