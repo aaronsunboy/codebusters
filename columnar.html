@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Codebusters Columnar Transposition cipher practice">
+    <title>Columnar Transposition Practice</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .puzzle-container {
+            max-width: 900px;
+            margin: auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .puzzle-container h1 {
+            text-align: center;
+            color: #ff9900;
+            margin-bottom: 25px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        #keyword-input {
+            padding: 8px;
+            border: 2px solid #ff9900;
+            border-radius: 4px;
+            text-transform: uppercase;
+            font-size: 1.1rem;
+            width: 200px;
+            text-align: center;
+        }
+
+        .cipher-display, .decrypted-output {
+            border: 2px solid #ccc;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 8px;
+            background-color: #fff8e1;
+            text-align: center;
+            font-size: 1.4rem;
+            font-weight: bold;
+            letter-spacing: 0.1em;
+            word-break: break-all;
+            min-height: 50px;
+        }
+        
+        .transposition-grid {
+            margin: 20px auto;
+            width: fit-content;
+        }
+
+        .transposition-grid table {
+            border-collapse: collapse;
+        }
+        
+        .transposition-grid th, .transposition-grid td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+            font-family: monospace;
+            font-size: 1.1rem;
+        }
+        
+        .transposition-grid th {
+            background-color: #ffecb3;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .selected-column {
+            background-color: #ffe082 !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <a href="index.html" class="logo">Codebusters</a>
+            <nav>
+                <ul>
+                    <li><a href="aristocrat.html">Aristocrat</a></li>
+                    <li><a href="patristocrat.html">Patristocrat</a></li>
+                    <li><a href="baconian.html">Baconian</a></li>
+                    <li><a href="xenocrypt.html">Xenocrypt</a></li>
+                    <li><a href="porta.html">Porta</a></li>
+                    <li><a href="cryptarithm.html">Cryptarithm</a></li>
+                    <li><a href="nihilist.html">Nihilist</a></li>
+                    <li><a href="columnar.html">Columnar</a></li>
+                    <li><a href="morse.html">Fractionated Morse</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <div class="puzzle-container">
+                <h1>Columnar Transposition Cipher Practice</h1>
+                <p class="text-center">A transposition cipher where a keyword determines the order of columns. To decrypt, reorder the columns until the plaintext is visible.</p>
+                
+                <div class="input-group">
+                    <label for="keyword-input">Keyword (Used for Column Order):</label>
+                    <input type="text" id="keyword-input" placeholder="TRANSPOSE">
+                </div>
+
+                <h2>Ciphertext:</h2>
+                <div id="cipher-display" class="cipher-display"></div>
+                
+                <div class="transposition-grid">
+                    <p style="text-align: center; font-weight: bold; margin: 10px 0;">Columnar Grid (Click column headers to reorder):</p>
+                    <table id="transposition-table">
+                        <!-- Transposition grid rendered here -->
+                    </table>
+                </div>
+
+                <div class="control-area" style="display: flex; justify-content: center; gap: 10px; margin-bottom: 20px;">
+                    <button id="decrypt-button" class="btn btn-primary" style="background-color: #ff9900;">Set Grid / Decrypt</button>
+                    <button id="new-puzzle-button" class="btn btn-secondary" style="background-color: #28a745;">New Puzzle</button>
+                    <button id="give-up-button" class="btn btn-secondary" style="background-color: #dc3545;">Show Solution</button>
+                </div>
+                
+                <p id="message-area" style="font-weight: bold; text-align: center; margin-top: 15px;"></p>
+
+                <h2>Decrypted Plaintext (Read Row-by-Row):</h2>
+                <div id="decrypted-output" class="decrypted-output" style="background-color: #e6ffec; border-color: #28a745;"></div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        const QUOTES = [
+            "TRANSPOSITION CIPHERS REARRANGE LETTERS BUT DO NOT SUBSTITUTE THEM",
+            "THE KEYWORD DETERMINES THE ORDER IN WHICH COLUMNS ARE READ",
+            "CRYPTANALYSIS OFTEN INVOLVES LOOKING FOR COMMON LETTER SEQUENCES",
+            "COLUMNAR TRANSPOSITION IS A CLASSIC WWI ERA CIPHER",
+            "THE LENGTH OF THE KEYWORD DICTATES THE NUMBER OF COLUMNS IN THE GRID"
+        ];
+        
+        let currentPlaintext = ''; // Normalized plaintext
+        let currentCiphertext = ''; // The final output ciphertext
+        let keyword = '';
+        let numColumns = 0;
+        let columnOrder = []; // Array of column indices based on keyword sort (0-indexed)
+        let userColumnOrder = []; // Array of column indices as currently displayed in the grid
+
+        const keywordInput = document.getElementById('keyword-input');
+        const cipherDisplay = document.getElementById('cipher-display');
+        const transpositionTable = document.getElementById('transposition-table');
+        const decryptedOutput = document.getElementById('decrypted-output');
+        const messageArea = document.getElementById('message-area');
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('decrypt-button').addEventListener('click', () => {
+                 setGrid();
+                 updateDecryptedOutput();
+            });
+            document.getElementById('new-puzzle-button').addEventListener('click', generateNewPuzzle);
+            document.getElementById('give-up-button').addEventListener('click', showSolution);
+            generateNewPuzzle();
+        });
+
+        function normalizeText(text) {
+            return text.toUpperCase().replace(/[^A-Z]/g, '');
+        }
+
+        /**
+         * Generates the column order based on the keyword (alphabetical sort).
+         * @param {string} key - The keyword.
+         * @returns {number[]} Array of 0-based column indices.
+         */
+        function getColumnOrder(key) {
+            const uniqueKey = [...new Set(key)].join('');
+            const sortedKey = uniqueKey.split('').sort();
+            
+            const order = [];
+            for (const char of sortedKey) {
+                // Find the index of the character in the *original* key
+                // Use indexOf for first occurrence to handle non-unique keys, but we've made it unique here
+                order.push(key.indexOf(char));
+            }
+            return order;
+        }
+
+        /**
+         * Encrypts the plaintext using Columnar Transposition.
+         * @param {string} plain - Normalized plaintext.
+         * @param {string} key - Keyword.
+         * @returns {string} Ciphertext.
+         */
+        function encrypt(plain, key) {
+            numColumns = key.length;
+            if (numColumns === 0) return plain;
+            
+            const numRows = Math.ceil(plain.length / numColumns);
+            columnOrder = getColumnOrder(key);
+            
+            let cipher = '';
+            
+            // Step 1: Write plaintext into the grid row-by-row
+            const grid = Array(numRows).fill(null).map(() => Array(numColumns).fill('X')); // Pad with 'X'
+
+            for (let i = 0; i < plain.length; i++) {
+                const row = Math.floor(i / numColumns);
+                const col = i % numColumns;
+                grid[row][col] = plain[i];
+            }
+
+            // Step 2: Read ciphertext out column-by-column based on the columnOrder
+            for (const originalColIndex of columnOrder) {
+                for (let r = 0; r < numRows; r++) {
+                    cipher += grid[r][originalColIndex];
+                }
+            }
+            
+            return cipher;
+        }
+
+        /**
+         * Sets up the grid based on the user's keyword and ciphertext.
+         */
+        function setGrid() {
+            keyword = keywordInput.value.toUpperCase().replace(/[^A-Z]/g, '');
+            if (keyword.length === 0) {
+                 messageArea.textContent = "Error: Please enter a Keyword.";
+                 messageArea.style.color = '#dc3545';
+                 return;
+            }
+            
+            const keyLetters = keyword.split('');
+            numColumns = keyLetters.length;
+            
+            if (currentCiphertext.length === 0) {
+                 messageArea.textContent = "Error: Ciphertext is empty.";
+                 messageArea.style.color = '#dc3545';
+                 return;
+            }
+            
+            const numRows = Math.ceil(currentCiphertext.length / numColumns);
+            
+            // The ciphertext is already grouped by column.
+            const columnLength = numRows; // In a perfect rectangle, column length = numRows
+            const remainder = currentCiphertext.length % numColumns;
+            
+            // Reset the column order to natural (0, 1, 2...) for the user to solve
+            userColumnOrder = Array.from({length: numColumns}, (_, i) => i);
+            
+            let tableHtml = '<thead><tr>';
+            
+            // Header: Column Index (0-based)
+            keyLetters.forEach((letter, index) => {
+                tableHtml += `<th data-col-index="${index}">${letter} (${index + 1})</th>`;
+            });
+            tableHtml += '</tr></thead><tbody>';
+
+            // Data Rows
+            for (let r = 0; r < numRows; r++) {
+                tableHtml += '<tr>';
+                for (let c = 0; c < numColumns; c++) {
+                    const cellIndex = (c * numRows) + r; 
+                    
+                    // Simple, non-perfect rectangle column read logic for decryption setup:
+                    // Determine the length of this specific column. 
+                    // Columns 0 to (remainder - 1) are one letter longer than the rest.
+                    let colLen = numRows;
+                    if (remainder > 0 && c >= remainder) {
+                         colLen = numRows - 1;
+                    }
+                    if (remainder === 0) colLen = numRows;
+
+                    let char;
+                    if (r < colLen) {
+                         // To set up the grid for DECRYPTION, we must fill the grid ROW-BY-ROW from the COLUMN-READ ciphertext.
+                         // This is tricky. We need to split the ciphertext into its original columns first.
+                         
+                         // For simplicity in a practice tool, we will just display the column contents
+                         // and let the user reorder the columns visually.
+
+                         char = 'X'; // Placeholder, to be filled by updateTableData
+
+                    } else {
+                        char = ''; // Empty cell padding
+                    }
+                    
+                    tableHtml += `<td data-row="${r}" data-col="${c}"></td>`;
+                }
+                tableHtml += '</tr>';
+            }
+            tableHtml += '</tbody>';
+            transpositionTable.innerHTML = tableHtml;
+            
+            // Now fill the cells with the column content
+            updateTableData();
+            
+            // Attach click handler to headers for reordering
+            document.querySelectorAll('#transposition-table th').forEach(th => {
+                th.onclick = () => {
+                    const clickedIndex = parseInt(th.getAttribute('data-col-index'));
+                    moveColumnToFront(clickedIndex);
+                };
+            });
+        }
+        
+        /**
+         * Fills the table cells with the ciphertext, respecting the current userColumnOrder.
+         */
+        function updateTableData() {
+            const cells = transpositionTable.querySelectorAll('td');
+            const numRows = transpositionTable.querySelector('tbody').rows.length;
+            const numCols = numColumns;
+
+            // Split the flat ciphertext into its columns based on the original structure
+            const totalLen = currentCiphertext.length;
+            const remainder = totalLen % numCols;
+            
+            const originalColumns = [];
+            let startIndex = 0;
+            for (let i = 0; i < numCols; i++) {
+                // Column length calculation based on original padding
+                const colLen = Math.ceil(totalLen / numCols); 
+                originalColumns.push(currentCiphertext.substring(startIndex, startIndex + colLen));
+                startIndex += colLen;
+            }
+
+            // Now, map the original columns to the user's displayed columns
+            cells.forEach(cell => cell.textContent = ''); // Clear all
+            
+            for (let displayCol = 0; displayCol < numCols; displayCol++) {
+                const originalColIndex = userColumnOrder[displayCol];
+                const colContent = originalColumns[originalColIndex];
+                
+                for (let r = 0; r < colContent.length; r++) {
+                    const selector = `td[data-row="${r}"][data-col="${displayCol}"]`;
+                    const cell = transpositionTable.querySelector(selector);
+                    if (cell) {
+                        cell.textContent = colContent[r];
+                    }
+                }
+            }
+        }
+
+        /**
+         * Reorders the columns in the userColumnOrder array.
+         * @param {number} clickedIndex - The original 0-based index of the column that was clicked.
+         */
+        function moveColumnToFront(clickedIndex) {
+            const currentIndex = userColumnOrder.indexOf(clickedIndex);
+            
+            // Move the element from its current position to the front
+            const [moved] = userColumnOrder.splice(currentIndex, 1);
+            userColumnOrder.unshift(moved); 
+
+            // Update UI to reflect new order
+            updateTableHeaders();
+            updateTableData();
+            updateDecryptedOutput();
+        }
+        
+        /**
+         * Updates the column headers (keyword and index) based on the new userColumnOrder.
+         */
+        function updateTableHeaders() {
+            const headerRow = transpositionTable.querySelector('thead tr');
+            const newHeaders = [];
+            
+            userColumnOrder.forEach(originalIndex => {
+                const originalHeader = document.querySelector(`th[data-col-index="${originalIndex}"]`);
+                if (originalHeader) {
+                    newHeaders.push(originalHeader.outerHTML);
+                }
+            });
+            
+            headerRow.innerHTML = newHeaders.join('');
+            
+            // Re-attach click handlers to new headers
+            document.querySelectorAll('#transposition-table th').forEach(th => {
+                th.onclick = () => {
+                    const clickedIndex = parseInt(th.getAttribute('data-col-index'));
+                    moveColumnToFront(clickedIndex);
+                };
+            });
+        }
+        
+        /**
+         * Reads the grid row-by-row to generate the decrypted output.
+         */
+        function updateDecryptedOutput() {
+            const numRows = transpositionTable.querySelector('tbody')?.rows.length;
+            if (!numRows) {
+                decryptedOutput.textContent = 'Grid is not initialized.';
+                return;
+            }
+
+            let plaintextGuess = '';
+            for (let r = 0; r < numRows; r++) {
+                for (let c = 0; c < numColumns; c++) {
+                    const selector = `td[data-row="${r}"][data-col="${c}"]`;
+                    const cell = transpositionTable.querySelector(selector);
+                    if (cell && cell.textContent.trim() !== 'X' && cell.textContent.trim() !== '') {
+                        plaintextGuess += cell.textContent.trim();
+                    }
+                }
+            }
+            
+            // Check for spaces in the original plaintext for better visualization
+            let finalOutput = '';
+            let currentPlainIndex = 0;
+            const originalWords = currentPlaintext.split(' ');
+            
+            originalWords.forEach((word, wordIndex) => {
+                for (let i = 0; i < word.length; i++) {
+                    if (currentPlainIndex < plaintextGuess.length) {
+                        finalOutput += plaintextGuess[currentPlainIndex];
+                        currentPlainIndex++;
+                    }
+                }
+                if (wordIndex < originalWords.length - 1) {
+                    finalOutput += ' ';
+                }
+            });
+            
+            decryptedOutput.textContent = finalOutput;
+            
+            if (finalOutput === currentPlaintext) {
+                messageArea.textContent = 'Solved! This is the correct plaintext.';
+                messageArea.style.color = '#28a745';
+            } else {
+                 messageArea.textContent = 'Rearrange the columns until the plaintext makes sense. (Click column headers)';
+                 messageArea.style.color = '#007bff';
+            }
+        }
+
+
+        /**
+         * Generates a new random puzzle for practice.
+         */
+        function generateNewPuzzle() {
+            const quote = QUOTES[Math.floor(Math.random() * QUOTES.length)];
+            currentPlaintext = normalizeText(quote);
+            
+            // Choose a random keyword length between 5 and 10
+            const keyLength = Math.floor(Math.random() * 6) + 5; 
+            let randomKey = '';
+            while (randomKey.length < keyLength) {
+                const char = ALPHABET[Math.floor(Math.random() * 26)];
+                if (!randomKey.includes(char)) {
+                    randomKey += char;
+                }
+            }
+            keywordInput.value = randomKey;
+
+            currentCiphertext = encrypt(currentPlaintext, randomKey);
+            cipherDisplay.textContent = currentCiphertext.match(/.{1,5}/g).join(' '); // Group into 5-letter blocks
+            
+            setGrid(); // Initialize the grid for solving (natural order)
+            updateDecryptedOutput();
+        }
+
+        /**
+         * Shows the solution by setting the correct keyword and column order.
+         */
+        function showSolution() {
+            // Set the keyword to the correct one (it's already in keywordInput.value)
+            setGrid(); 
+            
+            // Now, manually set the userColumnOrder to the correct columnOrder (based on keyword sort)
+            userColumnOrder = columnOrder; 
+            
+            // Update UI and decrypt
+            updateTableHeaders();
+            updateTableData();
+            updateDecryptedOutput();
+            messageArea.textContent = 'Solution revealed. The correct column order is now set.';
+            messageArea.style.color = '#dc3545';
+        }
+    </script>
+</body>
+</html>

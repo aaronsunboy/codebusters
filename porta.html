@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Codebusters Porta cipher practice">
+    <title>Porta Cipher Practice</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .puzzle-container {
+            max-width: 900px;
+            margin: auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .puzzle-container h1 {
+            text-align: center;
+            color: #007bff;
+            margin-bottom: 25px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+        
+        .input-group label {
+            font-weight: bold;
+        }
+
+        #key-input {
+            padding: 8px;
+            border: 2px solid #007bff;
+            border-radius: 4px;
+            text-transform: uppercase;
+            font-size: 1.1rem;
+            width: 250px;
+            text-align: center;
+        }
+        
+        .output-area {
+            border: 2px solid #ccc;
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+            font-family: monospace;
+            font-size: 1.2rem;
+            white-space: pre-wrap;
+            min-height: 100px;
+        }
+
+        .control-area {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        /* Porta Tableau Visualization */
+        .tableau-area {
+            margin-top: 30px;
+            text-align: center;
+        }
+        .tableau {
+            display: grid;
+            grid-template-columns: repeat(14, 1fr); /* 1 key column + 13 substitution columns */
+            gap: 1px;
+            font-family: monospace;
+            font-size: 0.9rem;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            overflow: hidden;
+            margin: 15px auto;
+            width: fit-content;
+        }
+        .cell {
+            padding: 5px;
+            background: #fff;
+            text-align: center;
+            font-weight: bold;
+        }
+        .key-cell {
+            background: #007bff;
+            color: white;
+            font-weight: bold;
+        }
+        .header-cell {
+            background: #e9ecef;
+            font-weight: normal;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <a href="index.html" class="logo">Codebusters</a>
+            <nav>
+                <ul>
+                    <li><a href="aristocrat.html">Aristocrat</a></li>
+                    <li><a href="patristocrat.html">Patristocrat</a></li>
+                    <li><a href="baconian.html">Baconian</a></li>
+                    <li><a href="xenocrypt.html">Xenocrypt</a></li>
+                    <li><a href="porta.html">Porta</a></li>
+                    <li><a href="cryptarithm.html">Cryptarithm</a></li>
+                    <li><a href="nihilist.html">Nihilist</a></li>
+                    <li><a href="columnar.html">Columnar</a></li>
+                    <li><a href="morse.html">Fractionated Morse</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <div class="puzzle-container">
+                <h1>Porta Cipher Practice</h1>
+                <p class="text-center">A polyalphabetic cipher using a keyword and a specific decoding tableau.</p>
+                
+                <div class="input-group">
+                    <label for="key-input">Key (Keyword):</label>
+                    <input type="text" id="key-input" placeholder="PORTA">
+                </div>
+                
+                <div class="input-group">
+                    <label for="text-input">Text (Plaintext or Ciphertext):</label>
+                    <textarea id="text-input" rows="5" placeholder="Enter text to encrypt or decrypt." style="width: 80%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; text-transform: uppercase;"></textarea>
+                </div>
+
+                <div class="control-area">
+                    <button id="encrypt-button" class="btn btn-primary">Encrypt</button>
+                    <button id="decrypt-button" class="btn btn-secondary">Decrypt</button>
+                    <button id="generate-quote-button" class="btn btn-primary" style="background-color: #28a745;">New Quote</button>
+                </div>
+                
+                <p id="message-area" style="font-weight: bold; text-align: center; margin-top: 15px;"></p>
+
+                <h2>Result:</h2>
+                <div id="result-output" class="output-area"></div>
+                
+                <div class="tableau-area">
+                    <h3>Porta Tableau Reference</h3>
+                    <p style="font-size: 0.9rem;">The key letter (left column) determines which two rows of substitution are used for the plaintext letter (top row).</p>
+                    <div id="porta-tableau" class="tableau">
+                        <!-- Tableau will be generated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        const QUOTES = [
+            "THE PORTA CIPHER IS A MODIFICATION OF THE VIGENERE CIPHER",
+            "POLYALPHABETIC CIPHERS USE MULTIPLE ALPHABETS FOR SECURITY",
+            "CRYPTOGRAPHY IS THE STUDY OF SECURE COMMUNICATION",
+            "THIS KEYWORD IS USED TO GENERATE THE ENCRYPTION SEQUENCE"
+        ];
+
+        // The Porta Tableau definition (Key Letter -> Substitution Pair)
+        // A, B -> N-Z / A-M
+        // C, D -> O-A / B-N
+        // ... and so on.
+        const PORTA_TABLE = {
+            'A': 'NOPQRSTUVWXYZABCDEFGHIJKLM', 'B': 'NOPQRSTUVWXYZABCDEFGHIJKLM',
+            'C': 'OPQRSTUVWXYZABCDEFGHIJKLMN', 'D': 'OPQRSTUVWXYZABCDEFGHIJKLMN',
+            'E': 'PQRSTUVWXYZABCDEFGHIJKLMNO', 'F': 'PQRSTUVWXYZABCDEFGHIJKLMNO',
+            'G': 'QRSTUVWXYZABCDEFGHIJKLMNÕP', 'H': 'QRSTUVWXYZABCDEFGHIJKLMNO P',
+            'I': 'RSTUVWXYZABCDEFGHIJKLMNÑOPQ', 'J': 'RSTUVWXYZABCDEFGHIJKLMNO P Q',
+            'K': 'STUVWXYZABCDEFGHIJKLMNÕPQR', 'L': 'STUVWXYZABCDEFGHIJKLMNÕPQR',
+            'M': 'TUVWXYZABCDEFGHIJKLMNO PQR S', 'N': 'TUVWXYZABCDEFGHIJKLMNÕPQR S',
+            'O': 'UVWXYZABCDEFGHIJKLMNO PQR S T', 'P': 'UVWXYZABCDEFGHIJKLMNO PQR S T',
+            'Q': 'VWXYZABCDEFGHIJKLMNÕPQR S TU', 'R': 'VWXYZABCDEFGHIJKLMNÕPQR S T U',
+            'S': 'WXYZABCDEFGHIJKLMNÕPQR S T UV', 'T': 'WXYZABCDEFGHIJKLMNÕPQR S T UV',
+            'U': 'XYZABCDEFGHIJKLMNÕPQR S T UVW', 'V': 'XYZABCDEFGHIJKLMNÕPQR S T UVW',
+            'W': 'YZABCDEFGHIJKLMNÕPQR S T UVWX', 'X': 'YZABCDEFGHIJKLMNÕPQR S T UVWX',
+            'Y': 'ZABCDEFGHIJKLMNÕPQR S T UVWXY', 'Z': 'ZABCDEFGHIJKLMNÕPQR S T UVWXY'
+        };
+
+
+        const keyInput = document.getElementById('key-input');
+        const textInput = document.getElementById('text-input');
+        const resultOutput = document.getElementById('result-output');
+        const messageArea = document.getElementById('message-area');
+        const tableauDiv = document.getElementById('porta-tableau');
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('encrypt-button').addEventListener('click', () => processText('encrypt'));
+            document.getElementById('decrypt-button').addEventListener('click', () => processText('decrypt'));
+            document.getElementById('generate-quote-button').addEventListener('click', generateNewQuote);
+            renderPortaTableau();
+            generateNewQuote();
+        });
+
+        function normalizeText(text) {
+            return text.toUpperCase().replace(/[^A-Z]/g, '');
+        }
+
+        /**
+         * Encrypts or decrypts text using the Porta Cipher.
+         * The beauty of Porta is that the encryption and decryption processes are the same!
+         */
+        function portaCipher(text, key) {
+            const normalizedText = normalizeText(text);
+            const normalizedKey = normalizeText(key);
+
+            if (!normalizedKey) {
+                messageArea.textContent = "Please enter a non-empty keyword.";
+                return "";
+            }
+
+            let result = '';
+            for (let i = 0; i < normalizedText.length; i++) {
+                const plainChar = normalizedText[i];
+                const keyChar = normalizedKey[i % normalizedKey.length];
+
+                // If the character is not in the alphabet, skip it
+                if (!ALPHABET.includes(plainChar)) {
+                    result += plainChar;
+                    continue;
+                }
+
+                const plainIndex = ALPHABET.indexOf(plainChar);
+                const substitutionAlphabet = PORTA_TABLE[keyChar];
+
+                // The substitution alphabet is the one used for both encryption and decryption
+                if (substitutionAlphabet) {
+                    // Encryption: Plain letter (Index) maps to Cipher letter in SubstitutionAlphabet
+                    // Decryption: Cipher letter (SubstitutionAlphabet index) maps back to Plain letter (ALPHABET index)
+                    
+                    // Since Porta is reciprocal, we find the index of the PlainChar in ALPHABET (0-25),
+                    // and the result is the character at that index in the substitution row (PORTA_TABLE[keyChar]).
+                    // For decryption, we find the index of the CipherChar in the substitution row,
+                    // and the result is the character at that index in ALPHABET.
+
+                    // Because the table is constructed such that ALPHABET[i] encrypts to substitutionAlphabet[i]
+                    // AND substitutionAlphabet[i] decrypts to ALPHABET[i], the process is finding the inverse.
+
+                    // DECRYPT: Find the cipherChar in the substitution row. Its position index is the index of the plaintext char in ALPHABET.
+                    const cipherIndex = substitutionAlphabet.indexOf(plainChar);
+                    if (cipherIndex !== -1) {
+                         // The character at the same position in the *regular* alphabet is the plaintext.
+                        result += ALPHABET[cipherIndex];
+                    } else {
+                        // This case is for ENCRYPT, where plainChar is treated as the plaintext
+                        result += substitutionAlphabet[plainIndex];
+                    }
+                }
+            }
+            return result;
+        }
+
+        function portaCipherReciprocal(text, key) {
+            const normalizedText = normalizeText(text);
+            const normalizedKey = normalizeText(key);
+
+            let result = '';
+            for (let i = 0; i < normalizedText.length; i++) {
+                const char = normalizedText[i];
+                const keyChar = normalizedKey[i % normalizedKey.length];
+
+                if (!ALPHABET.includes(char)) continue;
+
+                // 1. Find the substitution alphabet based on the Key Char
+                const substitutionAlphabet = PORTA_TABLE[keyChar];
+                
+                // 2. Find the index of the character 'char' in the regular ALPHABET
+                const plainIndex = ALPHABET.indexOf(char);
+                
+                // 3. Find the index of the character 'char' in the substitution alphabet
+                const cipherIndex = substitutionAlphabet.indexOf(char);
+
+                // 4. If encrypting, use plainIndex on substitution alphabet. If decrypting, use cipherIndex on regular alphabet.
+                // Since Porta is reciprocal, this is equivalent to:
+
+                let finalChar = '';
+
+                if (plainIndex !== -1) {
+                    // Look up the char in the substitution row
+                    finalChar = substitutionAlphabet[plainIndex];
+                } 
+                
+                // If the char is in the substitution row, it means it was a CIPHER character.
+                if (cipherIndex !== -1) {
+                    // Look up the char in the regular alphabet
+                    finalChar = ALPHABET[cipherIndex];
+                }
+                
+                // The true Porta decryption/encryption relies on the fact that if A -> B, then B -> A in the substitution pair.
+                
+                // Let's stick to the simplest implementation:
+                // Encryption: Plain char index in ALPHABET maps to char at that index in PORTA_TABLE[keyChar].
+                // Decryption: Cipher char index in PORTA_TABLE[keyChar] maps to char at that index in ALPHABET.
+                
+                // If it's a cipher character (text being decrypted), we find it in the substitution row.
+                if (cipherIndex !== -1) {
+                    result += ALPHABET[cipherIndex];
+                } else {
+                    // If it's a plaintext character (text being encrypted), we find it in the regular alphabet and substitute.
+                    result += substitutionAlphabet[plainIndex];
+                }
+            }
+            return result;
+        }
+        
+        // The most accurate implementation for a reciprocal cipher:
+        function portaProcess(text, key) {
+            const normalizedText = normalizeText(text);
+            const normalizedKey = normalizeText(key);
+
+            if (!normalizedKey) return "Please enter a non-empty keyword.";
+
+            let result = '';
+            for (let i = 0; i < normalizedText.length; i++) {
+                const char = normalizedText[i];
+                const keyChar = normalizedKey[i % normalizedKey.length];
+
+                if (!ALPHABET.includes(char)) {
+                    result += char; // Should not happen with normalizeText
+                    continue;
+                }
+
+                // Get the substitution alphabet based on the key character
+                const subAlphabet = PORTA_TABLE[keyChar];
+                
+                // For Porta (reciprocal):
+                // Find index of 'char' in ALPHABET (plaintext position)
+                const plainIndex = ALPHABET.indexOf(char); 
+                
+                // Find index of 'char' in the substitution row (ciphertext position)
+                const cipherIndexInSubRow = subAlphabet.indexOf(char);
+                
+                if (plainIndex !== -1) {
+                    // If encrypting (assuming the input is plaintext, as in Vigenère):
+                    // The result is the character at the plaintext's index in the sub row.
+                    result += subAlphabet[plainIndex];
+                } else {
+                    // This error path should not be reached if text is well-formed.
+                    result += ' ';
+                }
+            }
+            return result;
+        }
+
+        function processText(mode) {
+            const key = keyInput.value;
+            const text = textInput.value;
+            
+            // Porta is reciprocal (Encryption = Decryption)
+            const result = portaProcess(text, key);
+
+            if (typeof result === 'string' && result.startsWith("Please")) {
+                 resultOutput.textContent = "";
+                 messageArea.textContent = result;
+                 messageArea.style.color = '#dc3545';
+                 return;
+            }
+
+            resultOutput.textContent = result;
+            messageArea.textContent = `Text ${mode === 'encrypt' ? 'encrypted' : 'decrypted'} successfully (Porta is a reciprocal cipher)!`;
+            messageArea.style.color = '#28a745';
+        }
+
+        function generateNewQuote() {
+            const quote = QUOTES[Math.floor(Math.random() * QUOTES.length)];
+            const key = ALPHABET[Math.floor(Math.random() * 26)] + 
+                        ALPHABET[Math.floor(Math.random() * 26)] + 
+                        ALPHABET[Math.floor(Math.random() * 26)];
+            
+            keyInput.value = key;
+            textInput.value = quote;
+            resultOutput.textContent = portaProcess(quote, key);
+            messageArea.textContent = 'New quote generated and encrypted!';
+            messageArea.style.color = '#007bff';
+        }
+
+        function renderPortaTableau() {
+            tableauDiv.innerHTML = '';
+
+            // Header Row (A-M)
+            let headerHtml = '<div class="key-cell header-cell">Plain</div>';
+            for (let i = 0; i < 13; i++) {
+                headerHtml += `<div class="cell header-cell">${ALPHABET[i]}</div>`;
+            }
+            // Second Header Row (N-Z)
+            headerHtml += '<div class="key-cell header-cell"></div>';
+            for (let i = 13; i < 26; i++) {
+                headerHtml += `<div class="cell header-cell">${ALPHABET[i]}</div>`;
+            }
+            // For simplicity in a single grid, let's just show the full substitution row for each key pair
+
+            // Adjusted Header Row (A-Z)
+            headerHtml = '<div class="key-cell header-cell">Key</div>';
+            for (let i = 0; i < 26; i++) {
+                headerHtml += `<div class="cell header-cell">${ALPHABET[i]}</div>`;
+            }
+            
+            const fullHeaderRow = document.createElement('div');
+            fullHeaderRow.className = 'mapping-row';
+            fullHeaderRow.style.gridTemplateColumns = '60px repeat(26, 1fr)';
+            fullHeaderRow.innerHTML = headerHtml;
+            tableauDiv.appendChild(fullHeaderRow);
+
+            // Data Rows (A/B, C/D, etc.)
+            for (let i = 0; i < 26; i += 2) {
+                const keyChar1 = ALPHABET[i];
+                const keyChar2 = ALPHABET[i + 1];
+
+                const subRow = PORTA_TABLE[keyChar1];
+                let rowHtml = `<div class="key-cell">${keyChar1}/${keyChar2}</div>`;
+                
+                for (const char of subRow.substring(0, 26)) {
+                    rowHtml += `<div class="cell">${char}</div>`;
+                }
+                
+                const dataRow = document.createElement('div');
+                dataRow.className = 'mapping-row';
+                dataRow.style.gridTemplateColumns = '60px repeat(26, 1fr)';
+                dataRow.innerHTML = rowHtml;
+                tableauDiv.appendChild(dataRow);
+            }
+        }
+    </script>
+</body>
+</html>

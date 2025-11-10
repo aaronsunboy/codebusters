@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="codebusters practice website - Xenocrypt">
+    <title>Xenocrypt</title>
+    <!-- Load Tailwind CSS CDN for the React component's styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Link to your existing styles.css for header/footer/layout -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <a href="index.html" class="logo">Codebusters</a>
+            <nav>
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="aristocrat.html">Aristocrat</a></li>
+                    <li><a href="pastristocrat.html">Patristocrat</a></li>
+                    <li><a href="baconian.html">Baconian</a></li>
+                    <li><a href="xenocrypt.html">Xenocrypt</a></li>
+                    <li><a href="porta.html">Porta</a></li>
+                    <li><a href="cryptarithm.html">Cryptarithm</a></li>
+                    <li><a href="nihilist.html">Nihilist</a></li>
+                    <li><a href="columnar.html">Columnar</a></li>
+                    <li><a href="morse.html">Fractionated Morse</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main>
+        <div class="container">
+            <!-- The React app will render into the 'root' element -->
+            <div id="root"></div>
+            <!-- Load the React entry file for the Xenocrypt app -->
+            <script type="module" src="/src/xenocrypt-main.jsx"></script>
+        </div>
+    </main>
+    
+    <!-- Footer -->
+    <footer>
+        <div class="container text-center">
+            <p>&copy; 2024 Codebusters Practice</p>
+        </div>
+    </footer>
+</body>
+</html>

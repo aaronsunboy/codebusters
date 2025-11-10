@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Codebusters Cryptarithm solver and practice tool">
+    <title>Cryptarithm Practice</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .puzzle-container {
+            max-width: 600px;
+            margin: auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .puzzle-container h1 {
+            text-align: center;
+            color: #007bff;
+            margin-bottom: 25px;
+        }
+
+        .cryptarithm-display {
+            font-family: monospace;
+            font-size: 2.5rem;
+            line-height: 1.2;
+            padding: 20px 0;
+            margin: 20px auto;
+            border-bottom: 3px solid #333;
+            width: fit-content;
+            text-align: right;
+        }
+
+        .puzzle-line {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 5px;
+        }
+        
+        .letter-char {
+            width: 30px;
+            text-align: center;
+        }
+        
+        .sign-char {
+            width: 30px;
+            font-size: 1.5rem;
+            align-self: flex-end;
+            margin-right: 10px;
+        }
+
+        .mapping-inputs {
+            margin-top: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+
+        .mapping-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .map-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .map-item label {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #007bff;
+        }
+
+        .digit-input {
+            width: 35px;
+            height: 35px;
+            text-align: center;
+            font-size: 1.2rem;
+            border: 2px solid #ccc;
+            border-radius: 4px;
+            margin-top: 5px;
+        }
+
+        #check-button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+        
+        .solution-line {
+            font-family: monospace;
+            font-size: 2.5rem;
+            line-height: 1.2;
+            padding: 10px 0;
+            color: #28a745;
+        }
+        
+        .error-message {
+            color: #dc3545;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <a href="index.html" class="logo">Codebusters</a>
+            <nav>
+                <ul>
+                    <li><a href="aristocrat.html">Aristocrat</a></li>
+                    <li><a href="patristocrat.html">Patristocrat</a></li>
+                    <li><a href="baconian.html">Baconian</a></li>
+                    <li><a href="xenocrypt.html">Xenocrypt</a></li>
+                    <li><a href="porta.html">Porta</a></li>
+                    <li><a href="cryptarithm.html">Cryptarithm</a></li>
+                    <li><a href="nihilist.html">Nihilist</a></li>
+                    <li><a href="columnar.html">Columnar</a></li>
+                    <li><a href="morse.html">Fractionated Morse</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <div class="puzzle-container">
+                <h1>Cryptarithm Practice</h1>
+                <p class="text-center">Substitute each unique letter with a single digit (0-9) to make the arithmetic true. No leading zeros are allowed.</p>
+                
+                <!-- Puzzle Display -->
+                <div id="cryptarithm-display" class="cryptarithm-display">
+                    <!-- Puzzle structure (e.g., SEND + MORE = MONEY) rendered here -->
+                </div>
+
+                <!-- Input Controls -->
+                <div class="mapping-inputs">
+                    <h3>Your Letter-to-Digit Guesses</h3>
+                    <div id="mapping-grid" class="mapping-grid">
+                        <!-- Digit inputs for unique letters rendered here -->
+                    </div>
+                </div>
+
+                <div class="text-center">
+                    <button id="check-button" class="btn btn-primary">Check Solution</button>
+                    <button id="new-puzzle-button" class="btn btn-secondary" style="background-color: #28a745;">New Puzzle</button>
+                    <button id="give-up-button" class="btn btn-secondary" style="background-color: #dc3545;">Show Answer</button>
+                </div>
+                
+                <p id="message-area" style="text-align: center; margin-top: 15px;"></p>
+                
+                <!-- Solution Display -->
+                <div id="solution-display" class="cryptarithm-display solution-line" style="display: none;"></div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const PUZZLES = [
+            {
+                words: ["SEND", "MORE", "MONEY"], 
+                op: "+", 
+                solution: {S: 9, E: 5, N: 6, D: 7, M: 1, O: 0, R: 8, Y: 2} 
+            },
+             {
+                words: ["BASE", "BALL", "GAMES"], 
+                op: "+", 
+                solution: {B: 2, A: 1, S: 4, E: 8, L: 9, G: 5, M: 0} 
+            },
+            {
+                words: ["CROSS", "ROADS", "DANGER"], 
+                op: "+", 
+                solution: {C: 5, R: 3, O: 8, S: 7, D: 9, A: 4, N: 2, G: 1, E: 0} 
+            },
+        ];
+
+        let currentPuzzle = {};
+        let uniqueLetters = [];
+        let solutionMap = {};
+
+        const cryptarithmDisplay = document.getElementById('cryptarithm-display');
+        const mappingGrid = document.getElementById('mapping-grid');
+        const messageArea = document.getElementById('message-area');
+        const solutionDisplay = document.getElementById('solution-display');
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('new-puzzle-button').addEventListener('click', generateNewPuzzle);
+            document.getElementById('check-button').addEventListener('click', checkSolution);
+            document.getElementById('give-up-button').addEventListener('click', showAnswer);
+            generateNewPuzzle();
+        });
+
+        /**
+         * Initializes a new puzzle, extracts unique letters, and renders UI.
+         */
+        function generateNewPuzzle() {
+            currentPuzzle = PUZZLES[Math.floor(Math.random() * PUZZLES.length)];
+            solutionMap = currentPuzzle.solution;
+            uniqueLetters = [...new Set(currentPuzzle.words.join('').split(''))].sort();
+            
+            solutionDisplay.style.display = 'none';
+            messageArea.textContent = '';
+
+            renderPuzzle();
+            renderMappingInputs();
+        }
+
+        /**
+         * Renders the cryptarithm visually (e.g., S E N D + M O R E = M O N E Y).
+         */
+        function renderPuzzle() {
+            cryptarithmDisplay.innerHTML = '';
+            
+            const [word1, word2, resultWord] = currentPuzzle.words;
+
+            // Line 1: Word 1
+            let html = `<div class="puzzle-line"><span class="sign-char"></span>`;
+            html += word1.split('').map(letter => `<span class="letter-char">${letter}</span>`).join('');
+            html += `</div>`;
+
+            // Line 2: Operator and Word 2
+            html += `<div class="puzzle-line"><span class="sign-char">${currentPuzzle.op}</span>`;
+            html += word2.split('').map(letter => `<span class="letter-char">${letter}</span>`).join('');
+            html += `</div>`;
+
+            // Line 3: Result Word
+            html += `<div class="puzzle-line"><span class="sign-char">=</span>`;
+            html += resultWord.split('').map(letter => `<span class="letter-char">${letter}</span>`).join('');
+            html += `</div>`;
+
+            cryptarithmDisplay.innerHTML = html;
+        }
+
+        /**
+         * Renders the input fields for letter-to-digit mapping.
+         */
+        function renderMappingInputs() {
+            mappingGrid.innerHTML = '';
+            uniqueLetters.forEach(letter => {
+                const item = document.createElement('div');
+                item.className = 'map-item';
+                
+                const label = document.createElement('label');
+                label.textContent = letter;
+                
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.maxLength = 1;
+                input.className = 'digit-input';
+                input.setAttribute('data-letter', letter);
+                input.oninput = (e) => {
+                    // Only allow single digit input
+                    e.target.value = e.target.value.replace(/[^0-9]/g, '');
+                    messageArea.textContent = ''; // Clear message on new guess
+                    solutionDisplay.style.display = 'none';
+                };
+
+                item.appendChild(label);
+                item.appendChild(input);
+                mappingGrid.appendChild(item);
+            });
+        }
+
+        /**
+         * Gets the user's current mapping of letters to digits.
+         * @returns {Object|null} Map of {Letter: Digit} or null if invalid.
+         */
+        function getUserMapping() {
+            const mapping = {};
+            const usedDigits = new Set();
+            let isValid = true;
+
+            document.querySelectorAll('.digit-input').forEach(input => {
+                const letter = input.getAttribute('data-letter');
+                const digit = input.value;
+                
+                if (digit === '') {
+                    isValid = false; // Missing digit
+                    return;
+                }
+                
+                if (usedDigits.has(digit)) {
+                    isValid = false; // Duplicate digit
+                    return;
+                }
+                
+                // Leading zero check
+                if (digit === '0' && (currentPuzzle.words.includes(letter) || currentPuzzle.words.slice(0, 2).some(word => word[0] === letter))) {
+                     isValid = false; // Leading zero is invalid
+                     messageArea.innerHTML = `<span class="error-message">Error: ${letter} cannot be zero (leading digit).</span>`;
+                     return;
+                }
+                
+                mapping[letter] = parseInt(digit, 10);
+                usedDigits.add(digit);
+            });
+            
+            if (!isValid) return null;
+            return mapping;
+        }
+
+        /**
+         * Converts a word using the mapping to a number.
+         * @param {string} word - The word to convert.
+         * @param {Object} mapping - The letter-to-digit map.
+         * @returns {number} The resulting number.
+         */
+        function wordToNumber(word, mapping) {
+            let numStr = '';
+            for (const letter of word) {
+                if (mapping[letter] === undefined) return NaN;
+                numStr += mapping[letter];
+            }
+            return parseInt(numStr, 10);
+        }
+
+        /**
+         * Checks the user's current mapping against the arithmetic rule.
+         */
+        function checkSolution() {
+            const mapping = getUserMapping();
+            solutionDisplay.style.display = 'none';
+
+            if (!mapping) {
+                messageArea.innerHTML = `<span class="error-message">Error: Check for missing or duplicate digits, or leading zeros.</span>`;
+                return;
+            }
+
+            const [word1, word2, resultWord] = currentPuzzle.words;
+            const num1 = wordToNumber(word1, mapping);
+            const num2 = wordToNumber(word2, mapping);
+            const result = wordToNumber(resultWord, mapping);
+
+            if (isNaN(num1) || isNaN(num2) || isNaN(result)) {
+                messageArea.innerHTML = `<span class="error-message">Error: Mapping is incomplete.</span>`;
+                return;
+            }
+            
+            let arithmeticResult;
+            let expectedResult;
+
+            if (currentPuzzle.op === '+') {
+                arithmeticResult = num1 + num2;
+                expectedResult = result;
+            } else {
+                // Add other ops here if expanded
+                return;
+            }
+
+            if (arithmeticResult === expectedResult) {
+                messageArea.textContent = 'Correct! The arithmetic is satisfied.';
+                messageArea.style.color = '#28a745';
+                showCalculatedSolution(mapping);
+            } else {
+                messageArea.innerHTML = `<span class="error-message">Incorrect. ${num1} ${currentPuzzle.op} ${num2} equals ${arithmeticResult}, not ${expectedResult}. Keep guessing.</span>`;
+            }
+        }
+        
+        /**
+         * Displays the final calculated solution using the correct digits.
+         */
+        function showCalculatedSolution(mapping) {
+            const [word1, word2, resultWord] = currentPuzzle.words;
+            
+            const num1 = wordToNumber(word1, mapping);
+            const num2 = wordToNumber(word2, mapping);
+            const result = wordToNumber(resultWord, mapping);
+            
+            let html = `<div class="puzzle-line"><span class="sign-char"></span><span class="solution-num">${num1}</span></div>`;
+            html += `<div class="puzzle-line"><span class="sign-char">${currentPuzzle.op}</span><span class="solution-num">${num2}</span></div>`;
+            html += `<div class="puzzle-line" style="border-top: 3px solid #333;"><span class="sign-char">=</span><span class="solution-num">${result}</span></div>`;
+
+            solutionDisplay.innerHTML = html;
+            solutionDisplay.style.display = 'block';
+            
+             // Style numbers to align right using a span with a specific width
+            document.querySelectorAll('.solution-num').forEach(span => {
+                span.style.minWidth = `${(resultWord.length * 30)}px`;
+                span.style.textAlign = 'right';
+                span.style.display = 'inline-block';
+            });
+        }
+
+        /**
+         * Reveals the known correct answer for the current puzzle.
+         */
+        function showAnswer() {
+            messageArea.textContent = 'Solution revealed.';
+            messageArea.style.color = '#dc3545';
+            
+            // Fill inputs with the correct solution
+            document.querySelectorAll('.digit-input').forEach(input => {
+                const letter = input.getAttribute('data-letter');
+                input.value = solutionMap[letter];
+            });
+            
+            // Re-run check to display the correct arithmetic
+            checkSolution(); 
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Codebusters Nihilist substitution cipher practice">
+    <title>Nihilist Cipher Practice</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .puzzle-container {
+            max-width: 900px;
+            margin: auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .puzzle-container h1 {
+            text-align: center;
+            color: #cc0066;
+            margin-bottom: 25px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .input-group input {
+            padding: 8px;
+            border: 2px solid #cc0066;
+            border-radius: 4px;
+            text-transform: uppercase;
+            font-size: 1.1rem;
+            width: 150px;
+            text-align: center;
+        }
+        
+        .polybius-square {
+            margin: 20px auto;
+            width: fit-content;
+            border: 2px solid #333;
+            border-radius: 6px;
+            overflow: hidden;
+            font-family: monospace;
+            font-size: 1.1rem;
+        }
+        
+        .polybius-square table {
+            border-collapse: collapse;
+        }
+        
+        .polybius-square th, .polybius-square td {
+            border: 1px solid #ccc;
+            padding: 10px 15px;
+            text-align: center;
+        }
+        
+        .polybius-square th {
+            background-color: #f0f0f0;
+            font-weight: bold;
+        }
+
+        .cipher-sequence {
+            border: 2px dashed #cc0066;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 8px;
+            background-color: #fff0f5;
+            text-align: center;
+            font-size: 1.4rem;
+            font-weight: bold;
+            letter-spacing: 0.2em;
+        }
+        
+        .decrypted-output {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #e6ffec;
+            border: 1px solid #28a745;
+            border-radius: 4px;
+            min-height: 40px;
+            font-size: 1.2rem;
+            font-family: monospace;
+            text-transform: uppercase;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <a href="index.html" class="logo">Codebusters</a>
+            <nav>
+                <ul>
+                    <li><a href="aristocrat.html">Aristocrat</a></li>
+                    <li><a href="patristocrat.html">Patristocrat</a></li>
+                    <li><a href="baconian.html">Baconian</a></li>
+                    <li><a href="xenocrypt.html">Xenocrypt</a></li>
+                    <li><a href="porta.html">Porta</a></li>
+                    <li><a href="cryptarithm.html">Cryptarithm</a></li>
+                    <li><a href="nihilist.html">Nihilist</a></li>
+                    <li><a href="columnar.html">Columnar</a></li>
+                    <li><a href="morse.html">Fractionated Morse</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <div class="puzzle-container">
+                <h1>Nihilist Substitution Cipher Practice</h1>
+                <p class="text-center">A polyalphabetic cipher using a **Polybius Square**, a **Keyword** (for the square), and a **Numeric Key** (for addition).</p>
+                
+                <div class="input-group">
+                    <label for="square-key-input">Square Keyword:</label>
+                    <input type="text" id="square-key-input" placeholder="KEYWORD">
+                    <label for="numeric-key-input">Numeric Key:</label>
+                    <input type="text" id="numeric-key-input" placeholder="12345">
+                </div>
+                
+                <div class="polybius-square">
+                    <p style="text-align: center; font-weight: bold; margin: 10px 0;">Polybius Square (I/J Combined):</p>
+                    <table id="polybius-table">
+                        <!-- Table generated here -->
+                    </table>
+                </div>
+
+                <div class="input-group">
+                    <label for="ciphertext-input">Ciphertext (Space separated numbers):</label>
+                    <textarea id="ciphertext-input" rows="3" style="width: 80%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 1.1rem; text-align: center; font-family: monospace;" placeholder="45 67 23 89 12..."></textarea>
+                </div>
+
+                <div class="control-area" style="display: flex; justify-content: center; gap: 10px; margin-bottom: 20px;">
+                    <button id="decrypt-button" class="btn btn-primary" style="background-color: #cc0066;">Decrypt</button>
+                    <button id="new-puzzle-button" class="btn btn-secondary" style="background-color: #28a745;">New Puzzle</button>
+                </div>
+                
+                <p id="message-area" style="font-weight: bold; text-align: center; margin-top: 15px;"></p>
+
+                <h2>Decrypted Plaintext:</h2>
+                <div id="plaintext-output" class="decrypted-output"></div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const ALPHABET_25 = 'ABCDEFGHIKLMNOPQRSTUVWXYZ'; // J is missing
+        const DIGITS = '12345';
+        const PUZZLES = [
+            {
+                plain: "THE NIHILIST CIPHER WAS USED BY RUSSIAN REVOLUTIONARIES",
+                squareKey: "SECRET",
+                numKey: "9182",
+                cipher: "50 82 23 45 42 79 13 46 68 31 43 75 92 64 34 56 78 12 34 56 78 90 12"
+            },
+             {
+                plain: "CRYPTOGRAPHY IS THE STUDY OF SECURE COMMUNICATION",
+                squareKey: "ZEBRA",
+                numKey: "123",
+                cipher: "33 46 59 70 81 24 35 48 59 70 81 23 45 67 89 12 34 56 78 90 12 34 56 78 90"
+            }
+        ];
+        
+        const polybiusTable = document.getElementById('polybius-table');
+        const squareKeyInput = document.getElementById('square-key-input');
+        const numKeyInput = document.getElementById('numeric-key-input');
+        const ciphertextInput = document.getElementById('ciphertext-input');
+        const plaintextOutput = document.getElementById('plaintext-output');
+        const messageArea = document.getElementById('message-area');
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('decrypt-button').addEventListener('click', decryptNihilist);
+            document.getElementById('new-puzzle-button').addEventListener('click', generateNewPuzzle);
+            generateNewPuzzle(true);
+        });
+
+        /**
+         * Generates the 5x5 Polybius square based on a keyword.
+         * @param {string} key - The keyword.
+         * @returns {string} The 25-character Polybius sequence.
+         */
+        function generatePolybiusSequence(key) {
+            let sequence = '';
+            let keyClean = key.toUpperCase().replace(/[^A-Z]/g, '').replace(/J/g, 'I');
+            keyClean = [...new Set(keyClean)].join(''); // Remove duplicates
+
+            sequence += keyClean;
+            
+            let remaining = ALPHABET_25;
+            for (const char of keyClean) {
+                remaining = remaining.replace(char, '');
+            }
+            sequence += remaining;
+            return sequence;
+        }
+
+        /**
+         * Renders the Polybius square table in the UI.
+         * @param {string} sequence - The 25-character sequence.
+         */
+        function renderPolybiusTable(sequence) {
+            polybiusTable.innerHTML = '';
+            const headerRow = polybiusTable.insertRow();
+            headerRow.insertCell().textContent = ' ';
+            for (const digit of DIGITS) {
+                headerRow.insertCell().textContent = digit;
+            }
+
+            for (let r = 0; r < 5; r++) {
+                const row = polybiusTable.insertRow();
+                row.insertCell().textContent = DIGITS[r]; // Row header (1-5)
+                for (let c = 0; c < 5; c++) {
+                    row.insertCell().textContent = sequence[r * 5 + c];
+                }
+            }
+        }
+
+        /**
+         * Converts a letter to its two-digit coordinate based on the Polybius square.
+         * @param {string} char - The letter (A-Z, J converted to I).
+         * @param {string} sequence - The Polybius sequence.
+         * @returns {string} The 2-digit coordinate.
+         */
+        function charToCoordinate(char, sequence) {
+            const index = sequence.indexOf(char);
+            if (index === -1) return '';
+            const row = Math.floor(index / 5) + 1;
+            const col = (index % 5) + 1;
+            return `${row}${col}`;
+        }
+        
+        /**
+         * Converts a two-digit coordinate to a letter.
+         * @param {string} coord - The 2-digit coordinate string.
+         * @param {string} sequence - The Polybius sequence.
+         * @returns {string} The letter.
+         */
+        function coordinateToChar(coord, sequence) {
+            if (coord.length !== 2) return '';
+            const row = parseInt(coord[0]) - 1;
+            const col = parseInt(coord[1]) - 1;
+            if (row < 0 || row > 4 || col < 0 || col > 4) return '?';
+            const index = row * 5 + col;
+            return sequence[index];
+        }
+
+
+        /**
+         * Main decryption logic for the Nihilist Substitution Cipher.
+         */
+        function decryptNihilist() {
+            const squareKey = squareKeyInput.value.trim();
+            const numKey = numKeyInput.value.trim().replace(/[^0-9]/g, '');
+            const ciphertext = ciphertextInput.value.trim().split(/\s+/).filter(n => n.length > 0);
+
+            if (!squareKey || !numKey || ciphertext.length === 0) {
+                messageArea.textContent = "Error: Please enter the Square Keyword, Numeric Key, and Ciphertext numbers.";
+                messageArea.style.color = '#dc3545';
+                return;
+            }
+
+            if (numKey.length === 0) {
+                 messageArea.textContent = "Error: The Numeric Key must contain only digits.";
+                 messageArea.style.color = '#dc3545';
+                 return;
+            }
+
+            const sequence = generatePolybiusSequence(squareKey);
+            
+            const numKeyDigits = numKey.split('').map(d => parseInt(d, 10));
+            const decryptedCoords = [];
+            let plaintext = '';
+
+            // Step 1: Subtract the key sequence from the ciphertext numbers
+            for (let i = 0; i < ciphertext.length; i++) {
+                const cipherNum = parseInt(ciphertext[i]);
+                const keyNum = numKeyDigits[i % numKeyDigits.length];
+                
+                if (isNaN(cipherNum) || isNaN(keyNum)) {
+                    messageArea.textContent = `Error: Ciphertext or Numeric Key contains invalid values at position ${i + 1}.`;
+                    messageArea.style.color = '#dc3545';
+                    plaintextOutput.textContent = '';
+                    return;
+                }
+
+                const plainCoordNum = cipherNum - keyNum;
+                // Convert to 2-digit string format (e.g., 05, 12, 45)
+                const plainCoordStr = String(plainCoordNum).padStart(2, '0');
+                
+                decryptedCoords.push(plainCoordStr);
+            }
+
+            // Step 2: Convert the 2-digit coordinates back to letters using the Polybius square
+            for (const coord of decryptedCoords) {
+                plaintext += coordinateToChar(coord, sequence);
+            }
+
+            plaintextOutput.textContent = plaintext.split('').join(' '); // Add spaces for readability
+            messageArea.textContent = "Decryption successful! Check the coordinates against the Polybius square.";
+            messageArea.style.color = '#28a745';
+        }
+
+        /**
+         * Generates a new random puzzle for practice.
+         */
+        function generateNewPuzzle(initial=false) {
+            const puzzle = PUZZLES[Math.floor(Math.random() * PUZZLES.length)];
+            
+            const sequence = generatePolybiusSequence(puzzle.squareKey);
+            renderPolybiusTable(sequence);
+
+            squareKeyInput.value = puzzle.squareKey;
+            numKeyInput.value = puzzle.numKey;
+            ciphertextInput.value = puzzle.cipher;
+
+            plaintextOutput.textContent = '';
+            messageArea.textContent = initial ? 'Enter your keys and click Decrypt.' : 'New puzzle loaded. Try to decrypt it!';
+            messageArea.style.color = '#007bff';
+        }
+    </script>
+</body>
+</html>

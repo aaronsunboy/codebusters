@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Codebusters Baconian cipher practice">
+    <title>Baconian Cipher Practice</title>
+    <!-- Assuming styles.css is linked for general structure -->
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Specific Styles for Baconian Layout */
+        .puzzle-container {
+            max-width: 900px;
+            margin: auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .puzzle-container h1 {
+            text-align: center;
+            color: #007bff;
+            margin-bottom: 25px;
+        }
+
+        .cipher-display {
+            border: 2px solid #ccc;
+            padding: 20px 10px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            background-color: #eee;
+            line-height: 1.8;
+            text-align: center;
+            font-family: monospace;
+            overflow-x: auto; /* Allow horizontal scroll if needed */
+        }
+        
+        /* The main container for the 5-character groups */
+        .baconian-grid {
+            display: inline-flex;
+            flex-wrap: wrap; /* Allows the groups to wrap to the next line */
+            gap: 15px; /* Space between the decoded letters */
+            justify-content: center;
+        }
+
+        .baconian-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            /* width: 50px; /* Width of 5 chars + padding */
+            text-align: center;
+        }
+
+        .baconian-code {
+            font-size: 1.1rem;
+            font-weight: bold;
+            letter-spacing: 0.1em; /* Space out A/B chars */
+            margin-bottom: 5px;
+            padding: 2px 5px;
+            background-color: #d0eaff;
+            border-radius: 4px;
+        }
+
+        .plain-input {
+            width: 35px;
+            height: 35px;
+            padding: 0;
+            text-align: center;
+            font-size: 1.4rem;
+            border: 2px solid #007bff;
+            border-radius: 6px;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        /* Control Button Styles (Reusing pattern from Patristocrat) */
+        .control-area {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+        #new-puzzle-button, #clear-button, #give-up-button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-weight: bold;
+        }
+        #new-puzzle-button { background-color: #28a745; color: white; }
+        #new-puzzle-button:hover { background-color: #1e7e34; }
+        #clear-button { background-color: #ffc107; color: #333; }
+        #clear-button:hover { background-color: #e0a800; }
+        #give-up-button { background-color: #dc3545; color: white; }
+        #give-up-button:hover { background-color: #c82333; }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <a href="index.html" class="logo">Codebusters</a>
+            <nav>
+                <ul>
+                    <li><a href="aristocrat.html">Aristocrat</a></li>
+                    <li><a href="patristocrat.html">Patristocrat</a></li>
+                    <li><a href="baconian.html">Baconian</a></li>
+                    <li><a href="xenocrypt.html">Xenocrypt</a></li>
+                    <li><a href="porta.html">Porta</a></li>
+                    <li><a href="cryptarithm.html">Cryptarithm</a></li>
+                    <li><a href="nihilist.html">Nihilist</a></li>
+                    <li><a href="columnar.html">Columnar</a></li>
+                    <li><a href="morse.html">Fractionated Morse</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <div class="puzzle-container">
+                <h1>Baconian Cipher Practice</h1>
+                <p class="text-center">Each plaintext letter is encoded into a 5-character sequence of 'A's and 'B's.</p>
+                
+                <div class="control-area">
+                    <button id="new-puzzle-button">Generate New Cipher</button>
+                    <button id="clear-button">Clear All Guesses</button>
+                    <button id="give-up-button">Give Up / Show Solution</button>
+                </div>
+
+                <h2>Encoded Sequence (Ciphertext):</h2>
+                <div id="cipher-display" class="cipher-display">
+                    <div id="baconian-grid" class="baconian-grid">
+                        <!-- Baconian codes and input boxes will be rendered here -->
+                    </div>
+                </div>
+                
+                <p id="message-area" style="font-weight: bold; text-align: center; margin-top: 20px;"></p>
+                
+                <div class="mt-4">
+                    <h2>Decoding Reference (24-Letter Scheme I/J, U/V):</h2>
+                    <!-- Displayed for reference -->
+                    <pre style="background: #f4f4f4; padding: 15px; border-radius: 8px; font-size: 0.9rem; white-space: pre-wrap;">
+A: AAAAA  | G: AABBA  | L: ABABA  | Q: ABBBB  | V: BAABB
+B: AAAAB  | H: AABBB  | M: ABABB  | R: BAAAA  | W: BABAA
+C: AAABA  | I/J: ABAAA | N: ABBAA  | S: BAAAB  | X: BABAB
+D: AAABB  | K: ABAAB  | O: ABBAB  | T: BAABA  | Y: BABBA
+E: AABAA  |         | P: ABBBA  | U: BAABB  | Z: BABBB
+F: AABAB  
+                    </pre>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // --- Baconian-Specific JS Logic ---
+
+        const PUZZLES = [
+            "FRANCIS BACON INVENTED THIS CIPHER FOR HIDING SECRET MESSAGES",
+            "THE FIVE BIT CODE CAN BE CONCEALED BY CHANGING FONT STYLE",
+            "STEGANOGRAPHY IS THE ART OF CONCEALING A MESSAGE",
+            "A B A B B A A B B A A B A B A A B A B B",
+            "THE ORIGINAL SCHEME USED TWENTY FOUR LETTERS"
+        ];
+        
+        // Standard 24-letter Baconian Mapping (Plain -> Code)
+        const BACONIAN_ENCODE = {
+            'A': 'AAAAA', 'B': 'AAAAB', 'C': 'AAABA', 'D': 'AAABB', 'E': 'AABAA',
+            'F': 'AABAB', 'G': 'AABBA', 'H': 'AABBB', 'I': 'ABAAA', 'J': 'ABAAA', // I=J
+            'K': 'ABAAB', 'L': 'ABABA', 'M': 'ABABB', 'N': 'ABBAA', 'O': 'ABBAB',
+            'P': 'ABBBA', 'Q': 'ABBBB', 'R': 'BAAAA', 'S': 'BAAAB', 'T': 'BAABA',
+            'U': 'BAABB', 'V': 'BAABB', // U=V
+            'W': 'BABAA', 'X': 'BABAB', 'Y': 'BABBA', 'Z': 'BABBB'
+        };
+
+        // Standard 24-letter Baconian Mapping (Code -> Plain)
+        const BACONIAN_DECODE = {};
+        for (const [plain, code] of Object.entries(BACONIAN_ENCODE)) {
+            // Only map the code to one letter (I for I/J, U for U/V)
+            if (plain !== 'J' && plain !== 'V') { 
+                BACONIAN_DECODE[code] = plain;
+            }
+        }
+        
+        let currentPlaintext = ''; // The normalized plaintext
+        let currentBaconianSequence = []; // Array of 5-character codes
+        let userGuesses = []; // Array of user-guessed letters
+
+        const baconianGrid = document.getElementById('baconian-grid');
+        const messageArea = document.getElementById('message-area');
+        const newPuzzleButton = document.getElementById('new-puzzle-button');
+        const clearButton = document.getElementById('clear-button');
+        const giveUpButton = document.getElementById('give-up-button');
+
+        document.addEventListener('DOMContentLoaded', () => {
+            newPuzzleButton.addEventListener('click', generateNewPuzzle);
+            clearButton.addEventListener('click', clearGuesses);
+            giveUpButton.addEventListener('click', showSolution);
+            generateNewPuzzle();
+        });
+
+        // --- Core Cipher Functions ---
+
+        /**
+         * Cleans plaintext, removes spaces/punctuation, converts to uppercase.
+         * Note: I/J and U/V are handled by the encoding map itself.
+         * @param {string} text - The original text.
+         * @returns {string} The normalized text for encryption.
+         */
+        function normalizePlaintext(text) {
+            return text.toUpperCase().replace(/[^A-Z]/g, '');
+        }
+
+        /**
+         * Encodes the normalized plaintext into the Baconian A/B sequence.
+         * @param {string} plainText - The normalized plaintext (only A-Z).
+         * @returns {string[]} An array of 5-character Baconian codes.
+         */
+        function encodeBaconian(plainText) {
+            const sequence = [];
+            for (const char of plainText) {
+                const code = BACONIAN_ENCODE[char];
+                if (code) {
+                    sequence.push(code);
+                }
+                // Ignore any characters not in the map (shouldn't happen with normalization)
+            }
+            return sequence;
+        }
+
+        // --- UI Rendering Functions ---
+
+        /**
+         * Renders the Baconian sequence blocks and input boxes.
+         */
+        function renderPuzzleGrid() {
+            baconianGrid.innerHTML = '';
+            userGuesses = Array(currentBaconianSequence.length).fill(''); // Reset guesses
+            
+            currentBaconianSequence.forEach((code, index) => {
+                const groupDiv = document.createElement('div');
+                groupDiv.className = 'baconian-group';
+                
+                // Baconian Code (Top Row)
+                const codeSpan = document.createElement('span');
+                codeSpan.className = 'baconian-code';
+                codeSpan.textContent = code;
+
+                // Plaintext Input (Bottom Row)
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.maxLength = 1;
+                input.className = 'plain-input';
+                input.setAttribute('data-index', index);
+                
+                input.addEventListener('input', handleInput);
+                
+                groupDiv.appendChild(codeSpan);
+                groupDiv.appendChild(input);
+                baconianGrid.appendChild(groupDiv);
+            });
+            
+            checkSolution();
+        }
+
+        // --- Interaction Functions ---
+
+        /**
+         * Handles user input into any plaintext input box.
+         * @param {Event} event - The input event.
+         */
+        function handleInput(event) {
+            const input = event.target;
+            const index = parseInt(input.getAttribute('data-index'), 10);
+            let plainChar = input.value.toUpperCase();
+
+            // Sanitize input
+            if (plainChar.length > 1 || !/^[A-Z]$/.test(plainChar)) {
+                plainChar = '';
+            }
+
+            // Update internal state
+            userGuesses[index] = plainChar;
+            input.value = plainChar; // Ensure input reflects sanitized/uppercased value
+
+            // Check if input matches expected letter (handling I/J and U/V)
+            checkSolution();
+        }
+
+        /**
+         * Checks if the current user guesses match the original puzzle plaintext.
+         */
+        function checkSolution() {
+            let solved = true;
+            let fullGuess = '';
+
+            for (let i = 0; i < currentBaconianSequence.length; i++) {
+                const guessedChar = userGuesses[i];
+                const correctChar = BACONIAN_DECODE[currentBaconianSequence[i]] || ''; // Should be the base letter (I or U)
+                
+                // The user must guess the actual letter from the original quote (which might be J or V)
+                const originalPlainChar = currentPlaintext[i];
+                
+                if (!guessedChar) {
+                    solved = false;
+                    continue;
+                }
+                
+                // Compare the user's guess against the original plaintext character
+                if (guessedChar !== originalPlainChar) {
+                    solved = false;
+                }
+                fullGuess += guessedChar;
+            }
+
+            if (solved && fullGuess.length === currentPlaintext.length) {
+                messageArea.textContent = `SOLVED! The message is: ${currentPlaintext.split('').join(' ')} - Click "New Cipher" to continue.`;
+                messageArea.style.color = '#28a745';
+                // Disable inputs
+                document.querySelectorAll('.plain-input').forEach(input => input.disabled = true);
+            } else {
+                messageArea.textContent = 'Keep decoding...';
+                messageArea.style.color = '#007bff';
+            }
+        }
+
+        /**
+         * Resets the game state and generates a new Baconian puzzle.
+         */
+        function generateNewPuzzle() {
+            const quoteIndex = Math.floor(Math.random() * PUZZLES.length);
+            currentPlaintext = normalizePlaintext(PUZZLES[quoteIndex]);
+            currentBaconianSequence = encodeBaconian(currentPlaintext);
+            
+            // Re-enable inputs
+            document.querySelectorAll('.plain-input').forEach(input => input.disabled = false);
+
+            renderPuzzleGrid();
+            checkSolution();
+        }
+
+        /**
+         * Clears all user guesses (substitutions).
+         */
+        function clearGuesses() {
+            userGuesses = Array(currentBaconianSequence.length).fill('');
+            document.querySelectorAll('.plain-input').forEach(input => input.value = '');
+            messageArea.textContent = 'Guesses cleared. Start fresh!';
+            messageArea.style.color = '#6c757d';
+            checkSolution();
+            // Re-enable inputs
+            document.querySelectorAll('.plain-input').forEach(input => input.disabled = false);
+        }
+
+        /**
+         * Reveals the final solution plaintext.
+         */
+        function showSolution() {
+            messageArea.textContent = `Solution revealed. The message is: ${currentPlaintext.split('').join(' ')}`;
+            messageArea.style.color = '#dc3545';
+            
+            // Fill inputs with the correct solution
+            const inputs = document.querySelectorAll('.plain-input');
+            for (let i = 0; i < inputs.length; i++) {
+                inputs[i].value = currentPlaintext[i];
+                inputs[i].disabled = true;
+            }
+        }
+
+    </script>
+
+</body>
+</html>
