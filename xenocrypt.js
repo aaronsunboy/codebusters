@@ -1,51 +1,56 @@
-// --- Global Constants ---
-const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-
-const SPANISH_QUOTES = [
-    "SIEMPRE ES MAS FACIL DESTRUIR QUE CONSTRUIR.",
-    "LA LIBERTAD ES EL DERECHO QUE TIENEN LAS PERSONAS PARA ACTUAR SIN SER ESCLAVIZADOS.",
-    "LA MUSICA EXPRESA LO QUE NO PUEDE SER DICHO Y AQUELLO SOBRE LO QUE ES IMPOSIBLE PERMANECER EN SILENCIO.",
-    "AÑOS DE LUCHA POR UN MAÑANA MEJOR.",
-    "EL VIAJE DE MIL MILLAS COMIENZA CON UN SOLO PASO.",
-    "GRACIAS POR SU ATENCION. ESPERO QUE FUNCIONE."
-];
+// script.js
 
 // --- Global State ---
 let currentCiphertext = '';
-let currentPlaintext = '';     // The original, normalized Spanish quote
-let substitutionMap = {};      // User guesses: { 'CipherLetter': 'PlainLetter' }
-let correctKey = {};           // Solution key: { 'CipherLetter': 'PlainLetter' }
-let frequencyMap = {};         // Frequencies: { 'A': 15, 'B': 2, ... }
+let currentPlaintext = ''; // The original quote used to generate the cipher
+let substitutionMap = {};  // Stores current user guesses: { 'CipherLetter': 'PlainLetter' }
+let correctKey = {};       // Stores the correct mapping: { 'CipherLetter': 'PlainLetter' }
+let loadedPuzzles = [];    // Will store the quotes fetched from puzzles.json
+let frequencyMap = {};     // NEW: Stores letter frequencies: { 'A': 15, 'B': 2, ... }
 
 // --- Elements ---
-const puzzleGridDisplay = document.getElementById('cipher-display');
+const puzzleGridDisplay = document.getElementById('puzzle-grid-display'); // New element ID
 const clearButton = document.getElementById('clear-button');
-const newPuzzleButton = document.getElementById('new-puzzle-btn');
-const giveUpButton = document.getElementById('give-up-button');
+const newPuzzleButton = document.getElementById('new-puzzle-button');
+const giveUpButton = document.getElementById('give-up-button'); // New button element
 const mappingGrid = document.getElementById('mapping-grid');
 const messageArea = document.getElementById('message-area');
-const statusMessage = document.getElementById('status-message');
 
+const ALPHABET = 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ';
 
 // --- Utility Functions ---
 
 /**
- * Normalizes the Spanish text according to SO rules:
- * 1. Convert to uppercase.
- * 2. Remove all accents (Á -> A, É -> E, etc.).
- * 3. The character Ñ is preserved as-is and is NOT substituted.
+ * Loads the list of puzzles from the external JSON file.
  */
-function normalizeSpanish(text) {
-    let normalized = text.toUpperCase();
-    
-    // Replace accented vowels with their unaccented equivalents
-    normalized = normalized.replace(/Á/g, 'A').replace(/É/g, 'E').replace(/Í/g, 'I').replace(/Ó/g, 'O').replace(/Ú/g, 'U');
-    
-    return normalized;
+async function loadPuzzles() {
+    try {
+        messageArea.textContent = 'Loading puzzles...';
+        // Use fetch to get the JSON file
+        const response = await fetch('spanish_quotes.json');
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        // Parse the JSON data into the loadedPuzzles array
+        loadedPuzzles = await response.json();
+        
+        messageArea.textContent = 'Puzzles loaded successfully! Click "Generate New Cipher" to start!';
+        messageArea.style.color = 'green';
+
+    } catch (error) {
+        console.error("Could not load puzzles:", error);
+        messageArea.textContent = 'ERROR: Could not load puzzles. Check console for details.';
+        messageArea.style.color = 'red';
+        // Disable buttons if loading fails
+        newPuzzleButton.disabled = true;
+        clearButton.disabled = true;
+    }
 }
 
 /**
- * Calculates the frequency of each substitution letter (A-Z only) in the current ciphertext.
+ * Calculates the frequency of each letter in the current ciphertext.
  */
 function calculateFrequency() {
     const counts = {};
@@ -53,7 +58,6 @@ function calculateFrequency() {
     ALPHABET.split('').forEach(char => counts[char] = 0); // Initialize all to 0
 
     currentCiphertext.toUpperCase().split('').forEach(char => {
-        // Only count standard English letters for substitution frequency
         if (ALPHABET.includes(char)) {
             counts[char]++;
         }
@@ -63,96 +67,115 @@ function calculateFrequency() {
 }
 
 /**
- * Shuffles the letters of the alphabet to create a substitution key (derangement).
+ * Shuffles the letters of the alphabet to create a substitution key,
+ * ensuring it is a DERANGEMENT (no letter maps to itself: C -> C).
  * @returns {Object} A substitution map { CipherLetter: PlainLetter }
  */
 function generateRandomKey() {
-    const plainSource = ALPHABET.split('');
-    let cipherTarget = [...ALPHABET].sort(() => Math.random() - 0.5);
-
+    const cipherSource = ALPHABET.split('');
+    // Start with a random shuffle
+    let plainTarget = [...ALPHABET].sort(() => Math.random() - 0.5);
+    
     // Ensure the key is a Derangement (no letter maps to itself: C -> C)
     let hasFixedPoints = true;
     while(hasFixedPoints) {
         hasFixedPoints = false;
         
         for (let i = 0; i < ALPHABET.length; i++) {
-            if (plainSource[i] === cipherTarget[i]) {
+            // Check for a fixed point (Cipher 'A' maps to Plain 'A')
+            if (cipherSource[i] === plainTarget[i]) {
                 hasFixedPoints = true;
+                
+                // Find a simple swap: swap with the next letter to break the fixed point
                 let j = (i + 1) % ALPHABET.length;
-                [cipherTarget[i], cipherTarget[j]] = [cipherTarget[j], cipherTarget[i]];
+                
+                // Perform the swap
+                [plainTarget[i], plainTarget[j]] = [plainTarget[j], plainTarget[i]];
+                
+                // After the swap, we break and check the whole array again in the next while loop iteration
                 break; 
             }
         }
     }
     
-    // Create the INVERSE key: { PlainLetter: CipherLetter }
-    const inverseKey = {};
-    for(let i = 0; i < 26; i++) {
-        inverseKey[plainSource[i]] = cipherTarget[i];
+    // Now convert the derangement array back into the map
+    const keyMap = {};
+    for(let i = 0; i < 27; i++) {
+        // keyMap will look like: { 'A': 'Q', 'B': 'Z', ... }
+        keyMap[cipherSource[i]] = plainTarget[i];
     }
-    return inverseKey; // Returns Plain -> Cipher
+    return keyMap;
 }
 
 /**
- * Encrypts a message and establishes the final key.
- * @param {string} plaintext - The normalized plaintext message.
- * @param {Object} inverseKey - The substitution map { PlainLetter: CipherLetter }.
+ * Encrypts a message using the solution key by inverting it.
+ * @param {string} text - The plaintext message.
+ * @param {Object} key - The substitution map { CipherLetter: PlainLetter }.
  * @returns {string} The ciphertext.
  */
-function encryptMessage(plaintext, inverseKey) {
-    // 1. Encrypt the quote
-    const ciphertext = plaintext.split('').map(char => {
-        // Only substitute English letters A-Z
+function encryptMessage(text, key) {
+    // We need the reverse mapping (Plain -> Cipher) to encrypt
+    const inverseKey = {};
+    for (const [cipher, plain] of Object.entries(key)) {
+        inverseKey[plain] = cipher;
+    }
+
+    return text.toUpperCase().split('').map(char => {
+        // Check if the character is a letter
         if (ALPHABET.includes(char)) {
-            return inverseKey[char] || char;
+            // Use the inverse key for encryption
+            return inverseKey[char] || char; 
         }
-        // Pass through all other characters (Ñ, punctuation, spaces, etc.)
+        // Keep spaces and punctuation as is
         return char;
     }).join('');
-
-    // 2. Derive the correctKey (Cipher -> Plain) for solution checking
-    const solutionKey = {};
-    for (const [plain, cipher] of Object.entries(inverseKey)) {
-        solutionKey[cipher] = plain;
-    }
-    
-    // Store the solution key globally
-    correctKey = solutionKey;
-
-    return ciphertext;
 }
+
 
 // --- Core Logic ---
 
 /**
  * Handles the input event when a user types into a plaintext box.
  * This function updates the substitution map and manages letter conflicts.
+ * @param {Event} event - The input event.
+ * @param {string} cipherChar - The ciphertext letter corresponding to this input box.
  */
 function handlePlainTextInput(event, cipherChar) {
-    const input = event.target;
-    let plainChar = input.value.toUpperCase();
+    let plainChar = event.target.value.toUpperCase();
 
-    // 1. Sanitize Input
-    plainChar = plainChar.length > 1 ? plainChar.slice(-1) : plainChar;
-    plainChar = plainChar.replace(/[^A-Z]/g, '');
+    // 1. Keep input to a single, valid letter
+    if (plainChar.length > 1) {
+        plainChar = plainChar.slice(-1); // Take only the last character entered
+    }
 
-    input.value = plainChar; 
+    if (plainChar && !ALPHABET.includes(plainChar)) {
+        // If the character is not a letter, clear the input
+        event.target.value = '';
+        plainChar = ''; // Treat as cleared
+    }
+
+    event.target.value = plainChar; // Ensure the input is uppercase
+
+    let conflictCipher = null;
 
     if (plainChar) {
-        // 2. Check for conflicts (Plaintext used by a DIFFERENT Cipher letter)
-        const conflictCipher = Object.keys(substitutionMap).find(
+        // 2. Check for conflicts: if the Plaintext letter is already used by a DIFFERENT Cipher letter
+        conflictCipher = Object.keys(substitutionMap).find(
             (key) => substitutionMap[key] === plainChar && key !== cipherChar
         );
 
         if (conflictCipher) {
-            // Remove the old mapping
+            // 2a. Remove the old mapping
             delete substitutionMap[conflictCipher];
             
-            // Clear the input boxes for the conflicting letter
+            // 2b. Clear the input boxes for the conflicting letter across the entire grid
             const conflictInputs = document.querySelectorAll(`input[data-cipher-char="${conflictCipher}"]`);
-            conflictInputs.forEach(cInput => cInput.value = '');
+            conflictInputs.forEach(input => {
+                input.value = '';
+            });
 
-            messageArea.textContent = `Conflict resolved: ${conflictCipher} is no longer mapped to ${plainChar}.`;
+            // Provide feedback on the conflict
+            messageArea.textContent = `Conflict resolved: ${conflictCipher} is no longer mapped.`;
             messageArea.style.color = 'orange';
         }
 
@@ -160,42 +183,60 @@ function handlePlainTextInput(event, cipherChar) {
         substitutionMap[cipherChar] = plainChar;
 
         // 4. Auto-advance logic: move focus to the next input box
-        const allInputs = Array.from(document.querySelectorAll('.plaintext-input'));
-        const currentIndex = allInputs.indexOf(input);
+        const allInputs = Array.from(document.querySelectorAll('.plain-input'));
+        const currentIndex = allInputs.indexOf(event.target);
         
+        // Find the index of the next non-space/punctuation input box
         let nextIndex = currentIndex + 1;
-        if (nextIndex < allInputs.length) {
-            allInputs[nextIndex].focus();
+        let nextInput = null;
+
+        while (nextIndex < allInputs.length) {
+            nextInput = allInputs[nextIndex];
+            // Check if the next element is a standard input box
+            if (nextInput && nextInput.tagName === 'INPUT') {
+                nextInput.focus();
+                break;
+            }
+            nextIndex++;
         }
 
     } else {
-        // Input cleared
+        // If the input was cleared (backspace/delete)
         delete substitutionMap[cipherChar];
     }
     
     // 5. Update ALL inputs corresponding to this cipherChar
     const inputsToUpdate = document.querySelectorAll(`input[data-cipher-char="${cipherChar}"]`);
-    inputsToUpdate.forEach(i => {
-        i.value = plainChar;
+    inputsToUpdate.forEach(input => {
+        // Only update if the input is not the one currently being typed into (to avoid loop/focus issues)
+        if (input !== event.target) {
+            input.value = plainChar;
+        }
     });
 
     updateMappingTable();
     checkSolution();
 }
 
+
 /**
  * Initializes a new puzzle, setting up the key and ciphertext.
  */
 function generateNewPuzzle() {
+    if (loadedPuzzles.length === 0) {
+        messageArea.textContent = 'Puzzles not loaded. Check console for fetch errors.';
+        return;
+    }
+    
     // 1. Select a random quote from the loaded array
-    const rawQuote = SPANISH_QUOTES[Math.floor(Math.random() * SPANISH_QUOTES.length)];
-    currentPlaintext = normalizeSpanish(rawQuote);
+    const rawQuote = loadedPuzzles[Math.floor(Math.random() * loadedPuzzles.length)];
+    currentPlaintext = rawQuote.toUpperCase();
 
-    // 2. Generate the INVERSE key (Plain -> Cipher)
-    const inverseKey = generateRandomKey(); 
+    // 2. Generate the CORRECT key and store it globally
+    correctKey = generateRandomKey(); // { CipherLetter: PlainLetter }
 
-    // 3. Encrypt the quote, which also sets the global correctKey (Cipher -> Plain)
-    currentCiphertext = encryptMessage(currentPlaintext, inverseKey);
+    // 3. Encrypt the quote using the correct key 
+    currentCiphertext = encryptMessage(rawQuote, correctKey);
 
     // 4. Reset state
     substitutionMap = {};
@@ -206,71 +247,52 @@ function generateNewPuzzle() {
     // 6. Update the display
     renderPuzzleGrid();
     updateMappingTable();
-    statusMessage.classList.add('hidden');
-    messageArea.textContent = 'New Spanish Xenocrypt loaded! Start typing your guesses into the boxes.';
-    messageArea.style.color = '#3b82f6'; // Blue
+    messageArea.textContent = 'New puzzle loaded! Start typing your guesses into the boxes.';
+    messageArea.style.color = 'green';
 }
-
 
 /**
  * Renders the full puzzle grid: Ciphertext letters stacked above Plaintext input boxes.
  */
 function renderPuzzleGrid() {
-    puzzleGridDisplay.innerHTML = ''; 
+    puzzleGridDisplay.innerHTML = ''; // Clear previous content
     
     currentCiphertext.split('').forEach(cipherChar => {
-        const isCipherLetter = ALPHABET.includes(cipherChar);
-        
-        const charGroup = document.createElement('div');
-        charGroup.classList.add('char-group');
-        
-        // 1. Cipher Character (Top)
-        const cipherSpan = document.createElement('span');
-        cipherSpan.textContent = cipherChar;
-        cipherSpan.classList.add('cipher-char');
-        charGroup.appendChild(cipherSpan);
+        if (ALPHABET.includes(cipherChar)) {
+            // Create the letter-pair container (Cipher letter + Input box)
+            const pairDiv = document.createElement('div');
+            pairDiv.classList.add('letter-pair');
+            
+            // 1. Cipher Letter (Top)
+            const cipherSpan = document.createElement('span');
+            cipherSpan.textContent = cipherChar;
+            cipherSpan.classList.add('cipher-char');
+            pairDiv.appendChild(cipherSpan);
 
-        // 2. Plaintext Input or Placeholder (Bottom)
-        if (isCipherLetter) {
+            // 2. Plaintext Input (Bottom)
             const plainInput = document.createElement('input');
             plainInput.type = 'text';
+            // Use a data attribute to link inputs to their cipher letter
             plainInput.setAttribute('data-cipher-char', cipherChar); 
-            plainInput.classList.add('plaintext-input');
+            plainInput.classList.add('plain-input');
             plainInput.maxLength = 1;
             
+            // Pre-fill if a mapping already exists
             plainInput.value = substitutionMap[cipherChar] || '';
 
             // Attach the handler that updates the map and all matching inputs
             plainInput.addEventListener('input', (e) => handlePlainTextInput(e, cipherChar));
 
-            // Optional: Add basic movement listeners for smoother UX
-            plainInput.addEventListener('keydown', (e) => {
-                const allInputs = Array.from(document.querySelectorAll('.plaintext-input'));
-                const currentIndex = allInputs.indexOf(e.target);
-                
-                if (e.key === 'ArrowLeft' && currentIndex > 0) {
-                    e.preventDefault();
-                    allInputs[currentIndex - 1].focus();
-                } else if (e.key === 'ArrowRight' && currentIndex < allInputs.length - 1) {
-                    e.preventDefault();
-                    allInputs[currentIndex + 1].focus();
-                } else if (e.key === 'Backspace' && e.target.value === '' && currentIndex > 0) {
-                     e.preventDefault();
-                     allInputs[currentIndex - 1].focus();
-                }
-            });
-
-            charGroup.appendChild(plainInput);
+            pairDiv.appendChild(plainInput);
+            puzzleGridDisplay.appendChild(pairDiv);
             
         } else {
-            // Non-substituted characters (space, punctuation, Ñ)
-            const nonCipherSpan = document.createElement('span');
-            nonCipherSpan.textContent = cipherChar === ' ' ? '\u00A0' : cipherChar; 
-            nonCipherSpan.classList.add('non-cipher', 'font-sans', 'font-normal');
-            charGroup.appendChild(nonCipherSpan);
+            // Non-letter characters (spaces/punctuation) - just display them
+            const separatorSpan = document.createElement('span');
+            separatorSpan.textContent = cipherChar;
+            separatorSpan.classList.add('separator-char');
+            puzzleGridDisplay.appendChild(separatorSpan);
         }
-
-        puzzleGridDisplay.appendChild(charGroup);
     });
 }
 
@@ -287,13 +309,13 @@ function updateMappingTable() {
     const plainRow = document.createElement('div');
 
     freqRow.classList.add('mapping-row', 'frequency-row');
-    cipherRow.classList.add('mapping-row', 'bg-white');
-    plainRow.classList.add('mapping-row', 'bg-white');
+    cipherRow.classList.add('mapping-row', 'cipher-row');
+    plainRow.classList.add('mapping-row', 'plain-row');
 
     // 1. Frequency Row Label
     const freqLabel = document.createElement('div');
     freqLabel.classList.add('mapping-label');
-    freqLabel.textContent = 'Count (A-Z):';
+    freqLabel.textContent = 'Count:';
     freqRow.appendChild(freqLabel);
     
     // 2. Cipher Row Label
@@ -305,7 +327,7 @@ function updateMappingTable() {
     // 3. Plain Row Label
     const plainLabel = document.createElement('div');
     plainLabel.classList.add('mapping-label');
-    plainLabel.textContent = 'Plain (Guess):';
+    plainLabel.textContent = 'Plain:';
     plainRow.appendChild(plainLabel);
 
 
@@ -319,14 +341,14 @@ function updateMappingTable() {
 
         // Cipher Row Item
         const cipherItem = document.createElement('div');
-        cipherItem.classList.add('mapping-cell', 'text-red-600');
+        cipherItem.classList.add('mapping-cell');
         cipherItem.textContent = cipher;
         cipherRow.appendChild(cipherItem);
 
         // Plaintext Row Item (Guess)
         const plain = substitutionMap[cipher] || '_';
         const plainItem = document.createElement('div');
-        plainItem.classList.add('mapping-cell', 'text-green-600');
+        plainItem.classList.add('mapping-cell');
         plainItem.textContent = plain;
         plainRow.appendChild(plainItem);
     });
@@ -342,6 +364,7 @@ function updateMappingTable() {
  * Checks if the decoded text matches the original plaintext.
  */
 function checkSolution() {
+    // Collect all the decoded letters from the map
     let currentDecryptedText = currentCiphertext.split('').map(cipherChar => {
         if (ALPHABET.includes(cipherChar)) {
             return substitutionMap[cipherChar] || '_';
@@ -349,15 +372,17 @@ function checkSolution() {
         return cipherChar;
     }).join('');
 
-    if (currentDecryptedText === currentPlaintext && currentPlaintext.length > 0) {
-        statusMessage.classList.remove('hidden');
+    // Remove non-letters for comparison, ensure consistent casing
+    const cleanDecrypted = currentDecryptedText.replace(/[^A-Z]/g, '');
+    const cleanPlaintext = currentPlaintext.replace(/[^A-Z]/g, '');
+
+    if (cleanDecrypted === cleanPlaintext && cleanPlaintext.length > 0) {
         messageArea.textContent = 'CONGRATULATIONS! Puzzle Solved!';
         messageArea.style.color = 'green';
     } else {
-        statusMessage.classList.add('hidden');
         // Clear status message unless it's the conflict warning
         if (messageArea.textContent.includes('CONGRATULATIONS') || messageArea.textContent.includes('Conflict resolved')) {
-            // Keep the messages
+            // Keep the solved message or conflict warning
         } else {
              messageArea.textContent = '';
         }
@@ -370,7 +395,7 @@ function checkSolution() {
 function clearMappings() {
     substitutionMap = {};
     messageArea.textContent = 'All mappings cleared. Start over!';
-    messageArea.style.color = '#f59e0b'; // Amber
+    messageArea.style.color = '#007bff';
     // Re-render the grid to clear all input boxes
     renderPuzzleGrid();
     updateMappingTable();
@@ -390,18 +415,28 @@ function giveUp() {
     updateMappingTable();
     
     messageArea.textContent = 'Solution Revealed! Click "Generate New Cipher" to try a new puzzle.';
-    messageArea.style.color = '#dc3545'; // Red
+    messageArea.style.color = '#dc3545';
 }
 
 
 // --- Event Listeners ---
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    // 1. Load the puzzles first
+    await loadPuzzles();
+    
+    // 2. Generate the first puzzle once data is ready
+    if (loadedPuzzles.length > 0) {
+        generateNewPuzzle();
+    }
     
     // Attach listeners to buttons
     clearButton.addEventListener('click', clearMappings);
     newPuzzleButton.addEventListener('click', generateNewPuzzle);
-    giveUpButton.addEventListener('click', giveUp); 
+    giveUpButton.addEventListener('click', giveUp); // Attach new listener
     
-    // Generate the initial puzzle
-    generateNewPuzzle();
+    // Initial check to ensure everything is rendered
+    if (currentCiphertext) {
+        renderPuzzleGrid(); 
+    }
+    updateMappingTable();
 });
